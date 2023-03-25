@@ -10,7 +10,7 @@ When using the GPT-4 model, there's a limit on the number of messages in a conve
 
 ## Usage
 
-1. Open `chatgpt-message-tracker.html` in your web browser.
+1. Access the tool at [https://ghostinhat.github.io/chatgpt-message-tracker/](https://ghostinhat.github.io/chatgpt-message-tracker/).
 2. Send a message to ChatGPT using your preferred method.
 3. Click the "Submit message" button in the ChatGPT Message Tracker to record your message.
 4. The tool will track your messages and manage them within the message cap.
