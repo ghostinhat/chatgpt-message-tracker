@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Message Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 4px 6px 0 hsla(0, 0%, 0%, 0.1);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #5bc0de;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 3px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #31b0d5;
+        }
+
+        input,
+        select {
+            padding: 5px;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+
+        input {
+            width: 45px;
+        }
+
+        ul {
+            padding-left: 20px;
+            font-size: 14px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 400px;
+        }
+
+        .settings-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .settings-container div {
+            margin-bottom: 10px;
+        }
+
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .right-aligned {
+            text-align: right;
+        }
+
+        .buttons-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>ChatGPT Message Tracker</h1>
+
+        <div class="settings-container">
+            <div class="settings-row">
+                <div>
+                    <label for="totalMessagesQuota">Usage:</label>
+                    <span id="totalMessagesQuota">0 / 25</span>
+                </div>
+            </div>
+
+            <div class="settings-row right-aligned">
+                <div>
+                    <label for="timeRange">Monitor duration (minutes):</label>
+                    <select id="timeRange" onchange="updateDisplay()">
+                        <option value="30">30</option>
+                        <option value="60">60</option>
+                        <option value="90">90</option>
+                        <option value="120">120</option>
+                        <option value="150">150</option>
+                        <option value="180" selected>180</option>
+                        <option value="210">210</option>
+                        <option value="240">240</option>
+                        <option value="270">270</option>
+                        <option value="300">300</option>
+                        <option value="330">330</option>
+                        <option value="360">360</option>
+                        <option value="390">390</option>
+                        <option value="420">420</option>
+                        <option value="450">450</option>
+                        <option value="480">480</option>
+                        <option value="510">510</option>
+                        <option value="540">540</option>
+                        <option value="570">570</option>
+                        <option value="600">600</option>
+                        <option value="630">630</option>
+                        <option value="660">660</option>
+                        <option value="690">690</option>
+                        <option value="720">720</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="messageLimit">Message quota:</label>
+                    <input id="messageLimit" type="number" value="25" min="1" onchange="updateDisplay()">
+                </div>
+
+                <div>
+                    <label for="customInterval">Time interval (minutes):</label>
+                    <select id="customInterval" onchange="updateDisplay()"></select>
+                </div>
+            </div>
+        </div>
+
+        <div id="messageUsageContainer"
+            style="background-color: #f3f3f3; width: 100%; height: 20px; position: relative;">
+            <div id="messageUsageBar" style="background-color: #5bc0de; height: 100%; width: 0%; position: absolute;">
+            </div>
+        </div>
+
+        <p class="buttons-container">
+            <button onclick="sendMessage()">Submit message</button>
+            <button onclick="undo()">Revert last action</button>
+            <button onclick="clearHistory()">Reset message history</button>
+            <button onclick="openTimestampsDialog()">View message timestamps</button>
+        </p>
+        <p>
+            <canvas id="chart"></canvas>
+        </p>
+
+        <div id="timestampsDialog"
+            style="display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.4);">
+            <div
+                style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 50%;">
+                <h2>Message timestamps (within the last 180 minutes):</h2>
+                <ul id="messageTimestamps"></ul>
+                <button onclick="closeTimestampsDialog()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let messageHistory = JSON.parse(localStorage.getItem('messageHistory')) || [];
+        let messagesSent = messageHistory.length;
+        let lastAction = '';
+
+        // Load the stored values for timeRange and messageLimit or use default values
+        let storedTimeRange = parseInt(localStorage.getItem('timeRange')) || 180;
+        let storedMessageLimit = parseInt(localStorage.getItem('messageLimit')) || 25;
+        let storedCustomInterval = parseInt(localStorage.getItem('customInterval')) || 30;
+
+
+        document.getElementById('timeRange').value = storedTimeRange;
+        document.getElementById('messageLimit').value = storedMessageLimit;
+        document.getElementById('customInterval').value = storedCustomInterval;
+
+        function saveMessageHistory() {
+            localStorage.setItem('messageHistory', JSON.stringify(messageHistory));
+        }
+
+        function saveSettings() {
+            let timeRange = parseInt(document.getElementById('timeRange').value) || 180;
+            let messageLimit = parseInt(document.getElementById('messageLimit').value) || 25;
+            let customInterval = parseInt(document.getElementById('customInterval').value) || 30;
+
+            localStorage.setItem('timeRange', timeRange);
+            localStorage.setItem('messageLimit', messageLimit);
+            localStorage.setItem('customInterval', customInterval);
+        }
+
+
+        function clearHistory() {
+            let warningMessage = "This action will clear the message history and cannot be reverted. Are you sure you want to continue?";
+            if (confirm(warningMessage)) {
+                messageHistory = [];
+                messagesSent = 0;
+                localStorage.removeItem('messageHistory');
+                updateDisplay();
+            }
+        }
+
+
+        function formatDate(timestamp) {
+            let date = new Date(timestamp);
+            let year = date.getFullYear();
+            let month = String(date.getMonth() + 1).padStart(2, '0');
+            let day = String(date.getDate()).padStart(2, '0');
+            let hours = String(date.getHours()).padStart(2, '0');
+            let minutes = String(date.getMinutes()).padStart(2, '0');
+            let seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        function generateCustomIntervalOptions() {
+            let timeRange = parseInt(document.getElementById('timeRange').value) || 180;
+            let customIntervalSelect = document.getElementById('customInterval');
+            let storedCustomInterval = parseInt(localStorage.getItem('customInterval')) || 30;
+
+            customIntervalSelect.innerHTML = '';
+
+            let closestValue = timeRange;
+            let closestDifference = timeRange;
+
+            for (let i = 1; i <= timeRange; i++) {
+                if (timeRange % i === 0) {
+                    let option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    customIntervalSelect.appendChild(option);
+
+                    let difference = Math.abs(storedCustomInterval - i);
+                    if (difference < closestDifference) {
+                        closestDifference = difference;
+                        closestValue = i;
+                    }
+                }
+            }
+
+            customIntervalSelect.value = closestValue;
+        }
+
+        function updateDisplay() {
+            saveSettings();
+            generateCustomIntervalOptions();
+
+            let timeRange = parseInt(document.getElementById('timeRange').value) || 180;
+            let messageLimit = parseInt(document.getElementById('messageLimit').value) || 25;
+            let customInterval = parseInt(document.getElementById('customInterval').value) || 30;
+
+            let sumMessages = 0;
+            let chartLabels = [];
+            let chartData = [];
+            let numIntervals = Math.floor(timeRange / customInterval);
+
+            for (let i = 0; i < numIntervals; i++) {
+                let count = messageHistory.filter(msg => msg.minutesAgo >= (i * customInterval) && msg.minutesAgo < ((i + 1) * customInterval)).length;
+                sumMessages += count;
+                chartLabels.push(`${i * customInterval} - ${(i + 1) * customInterval}`);
+                chartData.push(count);
+            }
+
+            let messageTimestamps = messageHistory.map(msg => `<li>${formatDate(msg.timestamp)}</li>`).reverse().join('');
+            document.getElementById('messageTimestamps').innerHTML = messageTimestamps;
+
+            let messageUsagePercentage = (messagesSent / messageLimit) * 100;
+            let usageColor = 'rgba(91, 192, 222, 1)';
+            let chartColor = 'rgba(75, 192, 192, 0.3)';
+            let chartBorderColor = 'rgba(75, 192, 192, 1)';
+
+            if (messageUsagePercentage >= 90) {
+                usageColor = 'rgba(217, 83, 79, 1)';
+                chartColor = 'rgba(255, 51, 51, 0.3)';
+                chartBorderColor = 'rgba(255, 51, 51, 0.8)';
+            } else if (messageUsagePercentage >= 80) {
+                usageColor = 'rgba(255, 202, 77, 1)';
+                chartColor = 'rgba(255, 190, 77, 0.5)';
+                chartBorderColor = 'rgba(255, 190, 77, 1)';
+            }
+
+            document.getElementById('totalMessagesQuota').innerHTML = `<span style="color: ${usageColor}; font-weight: bold;">${messagesSent} / ${messageLimit}</span>`;
+            document.getElementById('messageUsageBar').style.backgroundColor = usageColor;
+            document.getElementById('messageUsageBar').style.width = messageUsagePercentage + '%';
+
+            createBarChart(chartLabels, chartData, chartColor, chartBorderColor);
+        }
+
+        function createBarChart(labels, data, color, borderColor) {
+            const ctx = document.getElementById('chart').getContext('2d');
+            if (window.myBarChart) {
+                window.myBarChart.destroy();
+            }
+
+            window.myBarChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Messages',
+                        data: data,
+                        backgroundColor: Array(data.length).fill(color),
+                        borderColor: Array(data.length).fill(borderColor),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+
+
+        function sendMessage() {
+            let now = new Date();
+            messageHistory.push({ timestamp: now, minutesAgo: 0 });
+            messagesSent++;
+            lastAction = 'send';
+            updateDisplay();
+            saveMessageHistory();
+        }
+
+        function undo() {
+            if (lastAction === 'send') {
+                messageHistory.pop();
+                messagesSent--;
+            }
+            lastAction = '';
+            updateDisplay();
+            saveMessageHistory();
+        }
+
+        function updateMessageTimes() {
+            let timeRange = parseInt(document.getElementById('timeRange').value) || 180;
+            let now = new Date();
+            messageHistory = messageHistory.map(msg => {
+                let timestamp = new Date(msg.timestamp);
+                let minutesAgo = Math.floor((now - timestamp) / 60000);
+                return { timestamp: msg.timestamp, minutesAgo: minutesAgo };
+            }).filter(msg => msg.minutesAgo <= timeRange);
+
+            messagesSent = messageHistory.length;
+            saveMessageHistory();
+            updateDisplay();
+        }
+
+        function openTimestampsDialog() {
+            document.getElementById('timestampsDialog').style.display = 'block';
+        }
+
+        function closeTimestampsDialog() {
+            document.getElementById('timestampsDialog').style.display = 'none';
+        }
+
+        updateDisplay();
+        setInterval(updateMessageTimes, 20000); // Update message times every minute
+
+
+    </script>
+</body>
+
+</html>
