@@ -335,17 +335,13 @@
                 }
             });
         }
-
-
-
-
+        
         function sendMessage() {
             let now = new Date();
             messageHistory.push({ timestamp: now, minutesAgo: 0 });
             messagesSent++;
             lastAction = 'send';
-            updateDisplay();
-            saveMessageHistory();
+            updateMessageTimes();
         }
 
         function undo() {
@@ -354,8 +350,7 @@
                 messagesSent--;
             }
             lastAction = '';
-            updateDisplay();
-            saveMessageHistory();
+            updateMessageTimes();
         }
 
         function updateMessageTimes() {
@@ -380,9 +375,8 @@
             document.getElementById('timestampsDialog').style.display = 'none';
         }
 
-        updateDisplay();
+        updateMessageTimes();
         setInterval(updateMessageTimes, 20000); // Update message times every minute
-
 
     </script>
 </body>
