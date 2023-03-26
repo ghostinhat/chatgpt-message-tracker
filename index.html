@@ -96,6 +96,39 @@
             flex-wrap: wrap;
             gap: 10px;
         }
+
+        #usage {
+            margin-top: 50px;
+        }
+
+        #usage h2 {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #usage ol {
+            margin-left: 10px;
+            font-size: 16px;
+        }
+
+        #usage ol li {
+            margin-bottom: 10px;
+        }
+
+        #usage p {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        #usage em {
+            font-style: italic;
+        }
+
+        #usage strong {
+            font-weight: bold;
+        }
+
     </style>
 </head>
 
@@ -168,6 +201,17 @@
         <p>
             <canvas id="chart"></canvas>
         </p>
+
+        <div id="usage">
+            <h3>Usage</h3>
+            <ol>
+                <li>Send a message to ChatGPT using your preferred method.</li>
+                <li>Click the "Submit message" button in the ChatGPT Message Tracker to record your message.</li>
+                <li>The tool will track your messages and manage them within the message cap.</li>
+            </ol>
+            <p><em>Note: This tool is specifically designed for the GPT-4 model and is not intended for use with the Default(GPT3.5) or Legacy(GPT3.5) models, as they do not have a message cap.</em></p>
+            <p><strong>Fun fact:</strong> This handy HTML tool was created with the assistance of ChatGPT, showcasing the productivity benefits of AI.</p>
+        </div>
 
         <div id="timestampsDialog"
             style="display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.4);">
@@ -335,7 +379,7 @@
                 }
             });
         }
-        
+
         function sendMessage() {
             let now = new Date();
             messageHistory.push({ timestamp: now, minutesAgo: 0 });
